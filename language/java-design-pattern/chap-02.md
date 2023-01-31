@@ -359,5 +359,217 @@ public class MainApplication {
 2. 面向对象相比面向过程编程有哪些优势？
 
    2.1 OOP 更加能够应对大规模复杂程序的开发
+        - 对于简单程序来说，不管使用面向过程编程，还是用面向对象编程，差别不会很大。
+        - 对于大规模复杂程序开发，整个程序的处理流程错综复杂，并非只有一条主线，回事一个网状结构。
    2.2 OOP 风格的代码更易复用、易扩展、易维护
    2.3 OOP 语言更加人性化、更加高级、更加智能
+
+## 理论四
+
+哪些代码设计看似是面向对象，实际是面向过程的?
+
+    常见编程风格:
+        - 面向过程编程
+        - 面向对象编程 (主流)
+        - 函数式编程
+
+1. 哪些代码设计看似是面向对象，实际是面向过程的？
+
+    a. 滥用 getter、setter 方法 (违反了面向对象编程的封装特性, 相当于将面向对象编程风格退化成了面向过程编程风格)
+
+```java
+public class ShoppingCart {
+    private int itemsCount;
+    private double totalPrice;
+    private List<ShoppingCartItem> items = new ArrayList<>();
+
+    public int getItemsCount(){
+        return this.itemsCount;
+    }
+
+    public void setItemsCount(int itemsCount) {
+        this.itemsCount = itemsCount;
+    }
+
+    public double getTotalPrice() {
+        return this.totalPrice;
+    }
+
+    public setTotalPrice(double totalPrice) {
+        this.totalPrice = totalPrice;
+    }
+
+    public List<ShoppingCartItem> getItems() {
+        return this.items;
+    }
+
+    public void addItem(ShoppingCartItem item) {
+        items.add(item);
+        itemsCount++;
+        totalPrice += item.getPrice();
+    }
+    // ... 省略其他方法 ...
+}
+```
+    虽然将内容定义为 private 私有属性, 但是提供了 public 的 getter、setter 方法, 两个属性跟定义为 public 没有什么两样了。
+    且 List 方法可以在获取后, 对其中的数据进行 items.clear(), 清空, 导致最终三个字段的内容不一致, 可以调整为 UnmodifiableList<E>
+
+    b. 滥用全局变量和全局方法
+        b.1 项目中定义一个庞大的 Constants 类
+        影响:
+            - 影响代码的可维护性
+            - 增加代码的编译时间
+            - 影响代码的复用性
+        改进方式:
+            - 将 Constants 类拆解为功能更加单一的多个类
+            - 把常量定义到使用的类中, 提高类设计的内聚性和代码的复用性
+        
+        b.2 Utils 类
+        意义:
+            - 两个类相同的功能逻辑,避免代码重复
+        方式:
+            - 通过继承实现代码复用
+            - 定义一个新类, 实现相同的功能
+        使用建议:
+            - 定义 Utils 类之前, 确认是否真的需要定义一个 Utils 类
+            - 是否可以将 Utils 某些方法定义到其他类中
+            - 确实需要的话, 细化针对不同的功能, 设计不同的 Utils 类
+    c. 定义数据和方法分离的类
+        c.1 传统的 MVC 叫做贫血模式, 违背面向对象的编程风格
+            - VO、BO、Entity (只会定义数据，不会定义方法，所有的操作逻辑都定义在对应的 Controller、Service、Repository 中) 为典型的面向过程的编程风格
+    
+    d. 为什么容易写出面向过程风格的代码
+        - 面向过程编程风格复合人的流程化思维方式
+        - 面向对象编程风格是一种自底向上的思考方式，将任务翻译成一个个小的模块(类), 设计类之间的交互，最后按照流程将类组装起来，完成整个任务。
+        - 面向对象编程，类的设计还是需要技巧及一定设计经验。
+
+## 理论5
+
+接口 vs 抽象类的区别？如何用普通的类模拟抽象类和接口
+
+    抽象类和接口时两个常用的语法概念。
+    C++ 只支持抽象类，不支持接口
+    Python 这类动态编程语言, 既不支持抽象类，也不支持接口
+
+
+    1. 什么是抽象类和接口？区别在哪里？
+
+定义抽象类
+
+        模板设计模式:
+            Logger 记录日志的抽象类
+            FileLogger 和 MessageQueueLogger 继承 Logger
+            分别实现两种不同的日志记录方式
+
+```java
+public abstract class Logger {
+    private String name;
+    private boolean enabled;
+    private Level minPermittedLevel;
+
+    public Logger(String name, boolean enabled, Level minPermittedLevel) {
+        this.name = name;
+        this.enabled = enabled;
+        this.minPermittedLevel = minPermittedLevel;
+    }
+
+    public void log(Level level, String message) {
+        boolean loggable = enable && (minPermittedLevel.intValue() <= level.intValue())
+        if (!loggable) return;
+        doLog(level, message);
+    }
+
+    protected  abstract void doLog(Level level, String message);
+}
+
+// 抽象类的子类: 输出日志到文件
+public class FileLogger extends Logger {
+    private Writer fileWriter;
+
+    public FileLogger(String name, boolean enable, Level minPermittedLevel, String filepath) {
+        super(name, enable, minPermittedLevel);
+        this.fileWriter = new FileWriter(filepath);
+    }
+
+    @Override
+    protected void doLog(Level level, String message) {
+        // 格式化 level 和 message, 输出到日志文件
+        fileWriter.write(...);
+    }
+}
+
+// 抽象类的子类: 输出日志到消息中间件 (比如: kafka)
+public class MessageQueueLogger extends Logger {
+    private MessageQueueClient msgQueueClient;
+
+    public MessageQueueLogger(String name, boolean enable, Level minPermittedLevel, MessageQueueClient msgQueueClient) {
+        super(name, enable, minPermittedLevel);
+        this.msgQueueClient = msgQueueClient;
+    }
+
+    @Override
+    protected void doLog(Level level, String message) {
+        // 格式化 level 和 message, 输出到消息中间件
+        msgQueueClient.send(...);
+    }
+}
+```
+
+    特性:
+        - 抽象类不允许被实例化，只能被继承
+        - 抽象类可以包含属性和方法
+        - 子类继承抽象类, 必须实现抽象类中的所有抽象方法
+
+定义接口:
+
+```java
+// 接口
+public interface Filter {
+    void doFilter(RpcRequest req) throws RpcExcedption;
+}
+
+// 接口实现类: 鉴权过滤器
+public class AuthencationFilter implements Filter {
+    @Override
+    public void doFilter(RpcRequest req) throws RpcException {
+        // 鉴权逻辑
+    }
+}
+// 接口实现类: 限流过滤器
+public class RateLimitFilter implements Filter {
+    @Override
+    public void doFilter(RpcRequest req) thorws RpcException {
+        // 限流逻辑
+    }
+}
+
+// 过滤器使用 demo
+public class Application {
+    // filters.add(new AuthencationFilter())
+    // filters.add(new RateLimitFilter())
+    private List<Filter> filters = new ArrayList<>();
+
+    public void handleRpcRequest(RpcRequest req) {
+        try {
+            for (Filter filter : filters) {
+                filter.doFilter(req);
+            }
+        } catch (RpcException e) {
+            // 处理过滤结果
+        }
+        // 省略其他处理逻辑
+    }
+}
+```
+
+    接口特性:
+        - 接口不能包含属性
+        - 接口只能生命方法，方法不能包含代码实现
+        - 类实现接口的时候，必须时间接口中声明的所有方法
+
+
+    抽象类是一种特殊的类, 不能被实例化为对象。
+
+    抽象类是 is-a 的关系
+
+    接口表示 has-a 的关系 (表示具有某些功能) 为了解决解耦问题，隔离接口和具体的实现，提高代码的扩展性。
